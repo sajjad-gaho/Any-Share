@@ -18,6 +18,31 @@
 
 Files: `infra/docker/server.Dockerfile`, `infra/deploy/*`, `infra/coturn/*`.
 
+## Shared VPS with an existing nginx (no Caddy)
+
+If nginx (or another web server) already serves other sites on 80/443, do not
+start `docker-compose.yml` (its Caddy needs 80/443). Use instead:
+
+- `infra/deploy/docker-compose.nginx.yml`: API and signaling only, published on
+  `127.0.0.1:18080` / `127.0.0.1:18081` (loopback, never public).
+- `infra/deploy/nginx/kestrel.conf.template`: ONE new nginx site for one host
+  name. `https://<host>/api/v1/*` goes to the API, `wss://<host>/ws` to
+  signaling, everything else returns 404. It replaces X-Forwarded-For
+  (TRUST_PROXY=1) and adds HSTS; the API sets the other security headers.
+  The WebSocket map variable is uniquely named, so other sites' maps do not clash.
+- Certificates: `certbot --nginx -d <host>` changes only that server block.
+- Desktop build: `MAIN_VITE_API_URL=https://<host>`, `MAIN_VITE_SIGNALING_URL=wss://<host>/ws`.
+
+Verified locally (2026-10-08) with nginx 1.26 next to another site:
+
+- `nginx -t` passes.
+- API readiness works through the proxy, with the database as `kestrel_api`.
+- The WebSocket upgrade and auth both work.
+- 100 KB bodies get 413, and unknown paths get 404.
+- A spoofed X-Forwarded-For is ignored.
+- Each security header appears exactly once.
+- The other site is unaffected.
+
 ## 1. Prerequisites
 
 - Ubuntu 24.04 LTS VPS (2 vCPU / 2 GB is enough to start), public IPv4.

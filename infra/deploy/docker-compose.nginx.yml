@@ -1,0 +1,73 @@
+# Kestrel API + signaling behind an EXISTING nginx on a shared VPS.
+#
+# Use this instead of docker-compose.yml when nginx (or another web server)
+# already owns ports 80/443 for other sites. No Caddy here: the existing nginx
+# terminates TLS and proxies one site to these two loopback-only ports
+# (infra/deploy/nginx/kestrel.conf.template). Nothing is published publicly.
+#
+#   cd infra/deploy
+#   cp server.env.example server.env && chmod 600 server.env   # fill in on the server only
+#   docker compose -f docker-compose.nginx.yml up -d --build
+name: kestrel
+
+x-service-hardening: &hardening
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=16m,mode=1777
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '5'
+  networks: [internal]
+
+services:
+  api:
+    <<: *hardening
+    image: ${API_IMAGE:-kestrel-api:latest}
+    build:
+      context: ../..
+      dockerfile: infra/docker/server.Dockerfile
+      args: { SERVICE: api, PORT: '8080' }
+    env_file: [./server.env]
+    environment:
+      APP_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: '8080'
+      # Exactly one proxy (nginx) in front; nginx sets X-Forwarded-For to $remote_addr.
+      TRUST_PROXY: '1'
+    # Loopback only: reachable by the host's nginx, never from the internet.
+    ports:
+      - '127.0.0.1:${KESTREL_API_PORT:-18080}:8080'
+    deploy:
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+
+  signaling:
+    <<: *hardening
+    image: ${SIGNALING_IMAGE:-kestrel-signaling:latest}
+    build:
+      context: ../..
+      dockerfile: infra/docker/server.Dockerfile
+      args: { SERVICE: signaling, PORT: '8081' }
+    env_file: [./server.env]
+    environment:
+      APP_ENV: production
+      SIGNALING_HOST: 0.0.0.0
+      SIGNALING_PORT: '8081'
+      TRUST_PROXY: '1'
+    ports:
+      - '127.0.0.1:${KESTREL_SIGNALING_PORT:-18081}:8081'
+    # One instance only: connection routing is in memory.
+    deploy:
+      replicas: 1
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+
+networks:
+  internal: {}
