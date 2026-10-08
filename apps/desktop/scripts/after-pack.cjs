@@ -8,6 +8,7 @@
 // `win-unpacked.tmp` fail with EPERM. Flipping in a child process closes every
 // handle before electron-builder continues (signing, then the rename).
 const { execFileSync } = require('node:child_process');
+const { rmSync } = require('node:fs');
 const { join } = require('node:path');
 const { loadBuildEnv, releaseProblems } = require('./release-config.cjs');
 
@@ -31,6 +32,11 @@ exports.default = async function afterPack(context) {
       );
     }
   }
+
+  // Electron's demo app. electron-builder drops it when it unpacks the Electron
+  // zip, but not when `electronDist` points at an unpacked Electron
+  // (docs/windows-release.md); the app never loads it, so it must not ship.
+  rmSync(join(context.appOutDir, 'resources', 'default_app.asar'), { force: true });
 
   const exe = join(context.appOutDir, `${context.packager.appInfo.productFilename}.exe`);
   execFileSync(process.execPath, [join(__dirname, 'flip-fuses.cjs'), exe], {
