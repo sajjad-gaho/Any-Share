@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+  - native/*
+
+# pnpm 10 blocks dependency lifecycle scripts unless they are approved here.
+allowBuilds:
+  # Downloads the Electron runtime binary.
+  electron: true
+  # Installs esbuild's native binary.
+  esbuild: true
+  # Only needed for the Squirrel.Windows target; this project packages with NSIS.
+  electron-winstaller: false

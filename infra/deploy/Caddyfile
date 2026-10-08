@@ -1,0 +1,78 @@
+# Caddy: the only public entry point for the API and signaling.
+#
+#   https://{$API_DOMAIN}     -> api:8080        (REST, /api/v1/...)
+#   wss://{$SIGNAL_DOMAIN}/ws -> signaling:8081  (WebSocket)
+#
+# Certificates are issued and renewed automatically (Let's Encrypt / ZeroSSL)
+# for public domains; *.localhost names get Caddy's local CA (local testing).
+# The API and signaling ports are never published; Caddy reaches them over the
+# internal Docker network.
+{
+	email {$ACME_EMAIL}
+	# Access logs as JSON on stdout (collected by Docker's log driver).
+	log {
+		output stdout
+		format json
+	}
+}
+
+(hardening) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "interest-cohort=()"
+		-Server
+		-Via
+	}
+}
+
+(upstream_headers) {
+	# Replace (never append to) X-Forwarded-For with the address Caddy saw, so the
+	# services (TRUST_PROXY=1) cannot be fooled by a client-supplied header.
+	header_up X-Forwarded-For {remote_host}
+	header_up X-Real-IP {remote_host}
+}
+
+{$API_DOMAIN} {
+	import hardening
+	log
+	encode zstd gzip
+	# Same limit as the API (64 KiB); larger bodies never reach Node.
+	request_body {
+		max_size 64KB
+	}
+	handle /api/v1/* {
+		reverse_proxy api:8080 {
+			import upstream_headers
+		}
+	}
+	handle /health* {
+		reverse_proxy api:8080 {
+			import upstream_headers
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}
+
+{$SIGNAL_DOMAIN} {
+	import hardening
+	log
+	# WebSocket upgrade is handled transparently by reverse_proxy.
+	handle /ws {
+		reverse_proxy signaling:8081 {
+			import upstream_headers
+			# Long-lived sockets: no proxy-side read timeout (signaling pings every 15 s).
+			stream_close_delay 5m
+		}
+	}
+	handle /health* {
+		reverse_proxy signaling:8081
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

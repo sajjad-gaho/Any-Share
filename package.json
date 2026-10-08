@@ -1,0 +1,40 @@
+{
+  "name": "remote-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Remote desktop and remote support platform (monorepo).",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @remote-desktop/desktop dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "turbo run test",
+    "check": "pnpm typecheck && pnpm lint && pnpm lint:native && pnpm format:check && pnpm test && pnpm test:integration",
+    "package:win": "pnpm --filter @remote-desktop/desktop package:win",
+    "dev:api": "pnpm --filter @remote-desktop/api dev",
+    "dev:signaling": "pnpm --filter @remote-desktop/signaling dev",
+    "test:integration": "turbo run test:integration",
+    "lint:native": "pnpm --filter @remote-desktop/windows-helper lint:native"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.6",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^4.1.11"
+  }
+}

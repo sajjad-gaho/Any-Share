@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@remote-desktop/ui/styles.css';
+
+/* Tailwind must scan the shared UI package for class names. */
+@source '../../../../../packages/ui/src';

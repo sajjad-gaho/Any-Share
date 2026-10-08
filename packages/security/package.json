@@ -1,0 +1,17 @@
+{
+  "name": "@remote-desktop/security",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure security policy helpers: RBAC role mapping and navigation allow-listing.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@remote-desktop/shared": "workspace:*"
+  }
+}

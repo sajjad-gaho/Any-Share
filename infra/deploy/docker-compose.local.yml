@@ -1,0 +1,19 @@
+# LOCAL TEST of the production stack on a developer machine (never on the VPS):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file local.env up -d --build
+#
+# localhost names make Caddy use its own local CA instead of Let's Encrypt.
+# local.env: API_DOMAIN=localhost, SIGNAL_DOMAIN=localhost:9443 (Windows does not
+# resolve *.localhost for Node, so both use "localhost" on different ports).
+# HTTPS is published on 8443 only. `.env.server.local` holds the server
+# configuration for this test (git-ignored, never copied into images).
+services:
+  caddy:
+    ports: !override
+      - '8443:443'
+      # Signaling on its own port when both names are "localhost" (SIGNAL_DOMAIN=localhost:9443).
+      - '9443:9443'
+  api:
+    env_file: !override [./.env.server.local]
+  signaling:
+    env_file: !override [./.env.server.local]

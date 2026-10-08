@@ -1,0 +1,30 @@
+{
+  "name": "@remote-desktop/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-side domain services shared by apps/api and apps/signaling: config, database access, auth verification, authorization, audit, rate limiting. Never import from Electron.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
+    "@remote-desktop/security": "workspace:*",
+    "@remote-desktop/shared": "workspace:*",
+    "jose": "^6.2.12",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1"
+  }
+}

@@ -1,0 +1,64 @@
+# --- Dependencies and build output --------------------------------------------
+node_modules/
+out/
+dist/
+release/
+coverage/
+.turbo/
+*.log
+*.tsbuildinfo
+
+# Rust (native/windows-helper)
+target/
+
+# --- Environment files: real values never enter Git -----------------------------
+# Only the documented *.example templates are committed.
+.env
+.env.*
+!.env.example
+!.env.*.example
+local.env
+*.local.env
+
+# --- Deployment secrets (infra/deploy, infra/coturn) -----------------------------
+server.env
+server.env.*
+!server.env.example
+**/secrets/
+*.secret
+*.secrets
+
+# --- Certificates, private keys, signing material --------------------------------
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.csr
+*.pfx
+*.p12
+*.p8
+*.jks
+*.keystore
+*.spc
+*.pvk
+*.snk
+infra/coturn/certs/
+# Exception: Supabase's PUBLIC root CA, pinned for database TLS verification.
+!supabase/certs/prod-ca-2021.crt
+
+# --- SSH keys --------------------------------------------------------------------
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.ppk
+known_hosts
+
+# --- Tool and machine-local state ------------------------------------------------
+# Supabase CLI link state (per machine)
+supabase/.temp/
+# Claude Code per-user permissions
+.claude/settings.local.json
+.DS_Store
+Thumbs.db

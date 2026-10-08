@@ -1,0 +1,36 @@
+# Build context for infra/docker/server.Dockerfile (API and signaling images).
+# Secrets must never enter an image: every .env file is excluded, and runtime
+# configuration is injected by the orchestrator (env_file / secrets).
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+.mcp.json
+.claude/
+supabase/.temp/
+
+# Build output and dependencies are produced inside the image.
+**/node_modules/
+**/dist/
+**/out/
+**/release/
+**/coverage/
+**/.turbo/
+**/*.log
+
+# Not part of the server images. Their package.json files stay so the
+# workspace matches pnpm-lock.yaml (a --frozen-lockfile install checks it).
+apps/desktop/**
+!apps/desktop/package.json
+native/**
+!native/windows-helper/package.json
+packages/ui/**
+!packages/ui/package.json
+tests/
+docs/
+infra/
+.git/

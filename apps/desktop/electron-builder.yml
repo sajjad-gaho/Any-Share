@@ -1,0 +1,70 @@
+# Packaging configuration. Identifiers and names are placeholders until branding
+# is final: change appId, productName, copyright, win.publisherName (and the
+# AppUserModelId in src/main/main.ts) together, before the first public release
+# (changing appId later breaks upgrades of installed copies).
+#
+# Release builds: `pnpm --filter @remote-desktop/desktop package:win` with
+# MAIN_VITE_API_URL (https://) and MAIN_VITE_SIGNALING_URL (wss://) set in
+# apps/desktop/.env.production; scripts/after-pack.cjs refuses anything else.
+appId: com.example.kestrel-remote
+productName: Kestrel Remote
+copyright: Copyright © 2026 Kestrel Remote (placeholder)
+
+directories:
+  output: release
+  buildResources: build
+
+# Everything the app needs is bundled by electron-vite into out/.
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+asar: true
+
+# Electron fuses (RunAsNode, NODE_OPTIONS, --inspect off; asar integrity and
+# asar-only loading on; cookie encryption on). file:// keeps its default
+# privileges until the renderer moves to a custom app:// protocol.
+# Flipped and verified by scripts/after-pack.cjs in a child process, so they
+# cannot be undone by switches or environment variables at run time.
+afterPack: scripts/after-pack.cjs
+
+# The Rust helper runs as a separate process, so it lives outside the asar
+# archive. Build it first: pnpm --filter @remote-desktop/windows-helper build
+extraResources:
+  - from: ../../native/windows-helper/target/release/kestrel-helper.exe
+    to: kestrel-helper.exe
+electronLanguages:
+  - en-US
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  # Application icon: build/icon.ico (256x256 multi-size). NOT PROVIDED YET: the
+  # default Electron icon is used until branding exists.
+  #
+  # CODE SIGNING: NOT CONFIGURED (no certificate available). Unsigned builds show
+  # a SmartScreen warning and cannot be auto-updated safely. When a certificate
+  # exists, enable ONE of these (docs/windows-release.md):
+  #   a) Azure Trusted Signing / Artifact Signing (recommended, no HSM to manage):
+  # azureSignOptions:
+  #   publisherName: <exact certificate subject CN>
+  #   endpoint: https://<region>.codesigning.azure.net
+  #   certificateProfileName: <profile>
+  #   codeSigningAccountName: <account>
+  #   b) EV/OV certificate on a hardware token or cloud HSM via signtool:
+  # signtoolOptions:
+  #   publisherName: <exact certificate subject CN>
+  #   certificateSubjectName: <subject>
+  #   rfc3161TimeStampServer: http://timestamp.digicert.com
+  # The private key must never be stored in this repository or in CI variables
+  # as a plain file.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Kestrel Remote

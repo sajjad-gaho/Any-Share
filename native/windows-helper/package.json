@@ -1,0 +1,12 @@
+{
+  "name": "@remote-desktop/windows-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rust Windows helper (screen capture, monitors, input, clipboard). Built with cargo; bundled into the Electron app as an extra resource.",
+  "scripts": {
+    "build": "cargo build --release --locked",
+    "typecheck": "cargo check --all-targets --locked",
+    "lint:native": "cargo clippy --all-targets --locked -- -D warnings && cargo fmt --check",
+    "test": "cargo test --locked"
+  }
+}

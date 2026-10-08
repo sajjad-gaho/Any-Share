@@ -1,0 +1,46 @@
+# Production coturn (STUN/TURN). Runs with host networking on a host with a
+# public IP: relay traffic uses a wide UDP port range that Docker's port
+# publishing handles poorly. See infra/coturn/README.md for firewall ports.
+#
+#   cd infra/coturn
+#   mkdir -p secrets && openssl rand -base64 48 | tr -d '\n' > secrets/turn_secret
+#   chmod 600 secrets/turn_secret        # same value as TURN_SECRET of the API/signaling
+#   # TLS: certificate for TURN_REALM in ./certs (fullchain.pem, privkey.pem)
+#   TURN_REALM=turn.example.com TURN_EXTERNAL_IP=<public ip> docker compose -f docker-compose.prod.yml up -d
+name: kestrel-turn
+
+services:
+  coturn:
+    image: coturn/coturn:4.6.3
+    restart: unless-stopped
+    network_mode: host
+    entrypoint: ['/bin/sh', '/entrypoint.prod.sh']
+    environment:
+      TURN_REALM: ${TURN_REALM:?set TURN_REALM (the TURN host name)}
+      TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+    volumes:
+      - ./turnserver.prod.conf:/etc/coturn/turnserver.conf:ro
+      - ./entrypoint.prod.sh:/entrypoint.prod.sh:ro
+      - ${TURN_CERT_DIR:-./certs}:/etc/coturn/certs:ro
+    secrets: [turn_secret]
+    read_only: true
+    tmpfs:
+      - /tmp:size=4m,mode=1777
+      - /var/lib/coturn:size=16m
+    cap_drop: [ALL]
+    # The image's turnserver binary carries this file capability; without it in
+    # the bounding set exec fails (EPERM). Also needed for alt-tls-listening-port=443.
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: '5'
+
+secrets:
+  turn_secret:
+    file: ${TURN_SECRET_FILE:-./secrets/turn_secret}

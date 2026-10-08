@@ -1,0 +1,18 @@
+{
+  "name": "@remote-desktop/webrtc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WebRTC session contracts and the validated signaling protocol. No peer connection, capture or input is implemented here.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@remote-desktop/shared": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

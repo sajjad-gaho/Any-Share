@@ -1,0 +1,105 @@
+# Production stack for one Linux VPS: Caddy (TLS) -> API + signaling.
+# coturn runs separately with host networking: infra/coturn/docker-compose.prod.yml.
+#
+#   cd infra/deploy
+#   cp .env.example .env               # domains, e-mail, image tags (not secret)
+#   cp server.env.example server.env   # application secrets (chmod 600, never commit)
+#   docker compose up -d --build
+#
+# Supabase (Auth + Postgres) stays managed; nothing here stores data except
+# Caddy's certificates (volume caddy_data).
+name: kestrel
+
+x-service-hardening: &hardening
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=16m,mode=1777
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '5'
+  networks: [internal]
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+      SIGNAL_DOMAIN: ${SIGNAL_DOMAIN:?set SIGNAL_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+      signaling:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
+    networks: [internal]
+
+  api:
+    <<: *hardening
+    image: ${API_IMAGE:-kestrel-api:latest}
+    build:
+      context: ../..
+      dockerfile: infra/docker/server.Dockerfile
+      args: { SERVICE: api, PORT: '8080' }
+    env_file: [./server.env]
+    environment:
+      APP_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: '8080'
+      # Exactly one proxy (Caddy) in front: see Caddyfile `upstream_headers`.
+      TRUST_PROXY: '1'
+    expose: ['8080']
+    deploy:
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+
+  signaling:
+    <<: *hardening
+    image: ${SIGNALING_IMAGE:-kestrel-signaling:latest}
+    build:
+      context: ../..
+      dockerfile: infra/docker/server.Dockerfile
+      args: { SERVICE: signaling, PORT: '8081' }
+    env_file: [./server.env]
+    environment:
+      APP_ENV: production
+      SIGNALING_HOST: 0.0.0.0
+      SIGNALING_PORT: '8081'
+      TRUST_PROXY: '1'
+    expose: ['8081']
+    # One instance only: connection routing is in memory (see docs/deployment.md).
+    deploy:
+      replicas: 1
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+
+networks:
+  internal: {}
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

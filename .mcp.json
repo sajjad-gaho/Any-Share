@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "supabase-pbs-desktop": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=wqomqigjotnkdlheccxl&read_only=true"
+    }
+  }
+}
