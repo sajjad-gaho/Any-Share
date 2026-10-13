@@ -91,6 +91,7 @@ export class ControllerSession {
   private constructor(
     private readonly api: DesktopApi,
     sessionId: string,
+    private readonly initialPreset: QualityPreset,
     private readonly callbacks: ControllerCallbacks,
   ) {
     this.sessionId = sessionId;
@@ -99,12 +100,14 @@ export class ControllerSession {
   static async start(
     api: DesktopApi,
     input: StartSessionInput,
+    /** Sent to the host as soon as the control channel opens ('auto' is the host default). */
+    initialPreset: QualityPreset,
     callbacks: ControllerCallbacks,
   ): Promise<ControllerSession> {
     callbacks.onPhase('requesting');
     const result = await api.session.start(input);
     if (!result.ok) throw new Error(result.error.message);
-    const session = new ControllerSession(api, result.value.sessionId, callbacks);
+    const session = new ControllerSession(api, result.value.sessionId, initialPreset, callbacks);
     session.unsubscribe = api.session.onEvent((event) => void session.onEvent(event));
     const snapshot = await api.session.ready(session.sessionId);
     if (snapshot.ok) session.iceServers = snapshot.value.iceServers;
@@ -165,6 +168,14 @@ export class ControllerSession {
       const channel = pc.createDataChannel(spec.label, { ordered: spec.ordered });
       this.channels.set(spec.label, channel);
       channel.addEventListener('message', (event) => this.onChannelMessage(spec.label, event.data));
+    }
+    const control = this.channels.get('control');
+    if (control && this.initialPreset !== 'auto') {
+      control.addEventListener(
+        'open',
+        () => this.sendControl({ t: 'quality.preset', preset: this.initialPreset }),
+        { once: true },
+      );
     }
     const fileChannel = this.channels.get('file');
     if (fileChannel) {

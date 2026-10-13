@@ -58,6 +58,7 @@ import { useAddressBookStore } from '@/stores/address-book-store';
 import { devicesStore } from '@/stores/app-stores';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCollection } from '@/stores/collection-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { ControllerSession, type ViewerPhase } from '@/webrtc/controller-session';
 import type { TransferProgress } from '@/webrtc/file-transfer';
 import { keyMessage, mouseButton, normalizePointer, wheelToRemote } from '@/webrtc/input-mapping';
@@ -153,10 +154,14 @@ function ConnectPanel({
   error: string | null;
   busy: boolean;
 }) {
-  const [selected, setSelected] = useState<Record<string, boolean>>({
-    control: true,
-    clipboard: true,
-    file_transfer: false,
+  // Starts from Settings > Remote Access; changes here apply to this request only.
+  const [selected, setSelected] = useState<Record<string, boolean>>(() => {
+    const defaults = useSettingsStore.getState().connectDefaults;
+    return {
+      control: defaults.control,
+      clipboard: defaults.clipboard,
+      file_transfer: defaults.fileTransfer,
+    };
   });
   const [password, setPassword] = useState('');
   const passwordId = useId();
@@ -273,7 +278,9 @@ export function ViewerPage() {
   const [follow, setFollow] = useState(false);
   const [fit, setFit] = useState(true);
   const [control, setControl] = useState(false);
-  const [preset, setPreset] = useState<QualityPreset>('auto');
+  const [preset, setPreset] = useState<QualityPreset>(
+    () => useSettingsStore.getState().defaultQuality,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [transfers, setTransfers] = useState<TransferProgress[]>([]);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -315,6 +322,7 @@ export function ViewerPage() {
           permissions: requested,
           accessPassword: accessPassword || undefined,
         },
+        preset,
         {
           onPhase: (next, info) => {
             setPhase(next);

@@ -7,6 +7,7 @@ import { DevicesPage } from '@/pages/devices/DevicesPage';
 import { NotFoundPage, RouteErrorPage } from '@/pages/errors/ErrorPages';
 import { SessionsPage } from '@/pages/sessions/SessionsPage';
 import { SettingsLayout, SettingsSectionPage } from '@/pages/settings/SettingsPage';
+import { TeamPage } from '@/pages/team/TeamPage';
 import { TransfersPage } from '@/pages/transfers/TransfersPage';
 import { HostSessionPage } from '@/pages/host-session/HostSessionPage';
 import { ViewerPage } from '@/pages/viewer/ViewerPage';
@@ -26,6 +27,7 @@ export const router = createHashRouter([
       { path: 'sessions', element: <SessionsPage /> },
       { path: 'transfers', element: <TransfersPage /> },
       { path: 'address-book', element: <AddressBookPage /> },
+      { path: 'team', element: <TeamPage /> },
       {
         path: 'settings',
         element: <SettingsLayout />,

@@ -13,8 +13,11 @@
  * credentials.
  */
 import type {
+  AuditLog,
   DeviceRecord,
   LoginInput,
+  OrganizationMember,
+  OrganizationWithRole,
   PasswordResetConfirmInput,
   RegisterInput,
   Role,
@@ -41,6 +44,15 @@ export const IPC_CHANNELS = {
   sessionsList: 'sessions:list',
   thisDeviceGet: 'this-device:get',
   thisDeviceRegister: 'this-device:register',
+  thisDeviceSettingsGet: 'this-device:settings-get',
+  thisDeviceSettingsUpdate: 'this-device:settings-update',
+  auditList: 'audit:list',
+  teamsList: 'teams:list',
+  teamsCreate: 'teams:create',
+  teamsMembers: 'teams:members',
+  teamsAddMember: 'teams:add-member',
+  teamsUpdateMember: 'teams:update-member',
+  teamsRemoveMember: 'teams:remove-member',
   sessionStart: 'session:start',
   sessionReady: 'session:ready',
   sessionSignal: 'session:signal',
@@ -116,6 +128,24 @@ export interface ThisDevice {
 // ---------------------------------------------------------------------------
 // Remote sessions (Phase 3)
 // ---------------------------------------------------------------------------
+
+/** This computer's server-side settings (enforced by the server, not the app). */
+export interface ThisDeviceSettings {
+  requireApproval: boolean;
+  hasAccessPassword: boolean;
+  /** The team (organisation) this computer belongs to, or null. */
+  organizationId: string | null;
+}
+
+/**
+ * `accessPassword`: a string sets or replaces it, null removes it.
+ * `organizationId`: moves this computer into a team, or out of one with null.
+ */
+export interface ThisDeviceSettingsUpdate {
+  requireApproval?: boolean;
+  accessPassword?: string | null;
+  organizationId?: string | null;
+}
 
 export type SessionRole = 'controller' | 'host';
 export type SignalingStatus = 'disconnected' | 'connecting' | 'connected';
@@ -217,6 +247,22 @@ export interface DesktopApi {
   thisDevice: {
     get(): Promise<ThisDevice | null>;
     register(name: string): Promise<IpcResult<ThisDevice>>;
+    /** Null when this computer is not registered. */
+    getSettings(): Promise<IpcResult<ThisDeviceSettings | null>>;
+    updateSettings(update: ThisDeviceSettingsUpdate): Promise<IpcResult<ThisDeviceSettings>>;
+  };
+  /** Teams (organisations). Every call is authorized server-side by the caller's role. */
+  teams: {
+    list(): Promise<IpcResult<OrganizationWithRole[]>>;
+    create(input: { name: string; slug: string }): Promise<IpcResult<OrganizationWithRole>>;
+    members(teamId: string): Promise<IpcResult<OrganizationMember[]>>;
+    addMember(teamId: string, input: { email: string; role: Role }): Promise<IpcResult>;
+    updateMember(teamId: string, userId: string, role: Role): Promise<IpcResult>;
+    removeMember(teamId: string, userId: string): Promise<IpcResult>;
+  };
+  audit: {
+    /** Activity the server lets this account see, newest first. */
+    list(options?: { before?: string }): Promise<IpcResult<AuditLog[]>>;
   };
   session: {
     /** Controller: ask to connect. Approval and permissions are decided server-side. */

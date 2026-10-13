@@ -75,20 +75,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
         control: { kind: 'switch', defaultValue: false },
       },
       {
-        id: 'unattended-password',
-        label: 'Unattended access password',
-        description: 'Allow connections without someone accepting them, protected by a password.',
-        feature: 'unattendedAccess',
-        control: { kind: 'switch', defaultValue: false },
-      },
-      {
-        id: 'require-approval',
-        label: 'Always ask before accepting a session',
-        description: 'Someone at this device must approve every incoming connection.',
-        feature: 'sessionPreferences',
-        control: { kind: 'switch', defaultValue: true },
-      },
-      {
         id: 'lock-on-end',
         label: 'Lock this device when a session ends',
         description: 'Locks Windows automatically after a remote session finishes.',
@@ -100,7 +86,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     id: 'remote-access',
     label: 'Remote Access',
-    description: 'What people connecting to this device are allowed to do.',
+    description: 'What you ask for when you connect, and what this device allows.',
     icon: MonitorSmartphone,
     planned: [
       {
@@ -109,27 +95,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
         description: 'Let other devices request a session with this one.',
         feature: 'sessionPreferences',
         control: { kind: 'switch', defaultValue: true },
-      },
-      {
-        id: 'allow-input',
-        label: 'Allow mouse and keyboard control',
-        description: 'Remote users can control input once you accept.',
-        feature: 'sessionPreferences',
-        control: { kind: 'switch', defaultValue: true },
-      },
-      {
-        id: 'allow-clipboard',
-        label: 'Allow clipboard sync',
-        description: 'Share copied text between the two devices.',
-        feature: 'sessionPreferences',
-        control: { kind: 'switch', defaultValue: false },
-      },
-      {
-        id: 'allow-files',
-        label: 'Allow file transfer',
-        description: 'Remote users can send and receive files.',
-        feature: 'sessionPreferences',
-        control: { kind: 'switch', defaultValue: false },
       },
       {
         id: 'allow-audio',
@@ -152,13 +117,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
         description: 'Hides the local display while someone works remotely.',
         feature: 'unattendedAccess',
         control: { kind: 'switch', defaultValue: false },
-      },
-      {
-        id: 'session-history',
-        label: 'Keep session history',
-        description: 'Record who connected, when, and for how long.',
-        feature: 'auditLogs',
-        control: { kind: 'switch', defaultValue: true },
       },
     ],
   },
@@ -194,17 +152,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     description: 'Balance image quality against responsiveness.',
     icon: Gauge,
     planned: [
-      {
-        id: 'quality',
-        label: 'Visual quality',
-        description: 'Default quality preset for new sessions.',
-        feature: 'sessionPreferences',
-        control: {
-          kind: 'select',
-          options: ['Balanced', 'Best quality', 'Best responsiveness'],
-          defaultValue: 'Balanced',
-        },
-      },
       {
         id: 'frame-rate',
         label: 'Frame rate limit',

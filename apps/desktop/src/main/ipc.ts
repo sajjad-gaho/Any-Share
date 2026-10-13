@@ -2,15 +2,22 @@ import { isAllowedNavigation } from '@remote-desktop/security';
 import {
   BRAND,
   accessPasswordSchema,
+  auditLogSchema,
   deviceIdSchema,
   deviceNameSchema,
   deviceRecordSchema,
   emailSchema,
   loginInputSchema,
+  memberAddInputSchema,
+  organizationCreateInputSchema,
+  organizationMemberSchema,
+  organizationWithRoleSchema,
   passwordResetConfirmSchema,
   registerInputSchema,
+  roleSchema,
   sessionPermissionSetSchema,
   sessionRecordSchema,
+  type AuditMetadata,
 } from '@remote-desktop/shared';
 import {
   FILE_CHUNK_BYTES,
@@ -24,7 +31,13 @@ import {
 } from '@remote-desktop/webrtc';
 import { app, ipcMain, nativeTheme, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import { z } from 'zod';
-import { IPC_CHANNELS, THEME_SOURCES, type AppInfo, type IpcResult } from '../shared/ipc';
+import {
+  IPC_CHANNELS,
+  THEME_SOURCES,
+  type AppInfo,
+  type IpcResult,
+  type ThisDeviceSettings,
+} from '../shared/ipc';
 import type { Backend } from './backend';
 import { ApiError } from './backend/http';
 import { HelperError } from './native/helper-client';
@@ -96,6 +109,35 @@ const startSchema = z
     accessPassword: accessPasswordSchema.optional(),
   })
   .strict();
+// Only this computer's own settings; the server re-checks that the signed-in
+// user may manage the device (and, for a team move, the team).
+const settingsUpdateSchema = z
+  .object({
+    requireApproval: z.boolean().optional(),
+    accessPassword: accessPasswordSchema.nullable().optional(),
+    organizationId: z.uuid().nullable().optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, 'Nothing to update');
+const auditListSchema = z
+  .object({ before: z.iso.datetime({ offset: true }).optional() })
+  .strict()
+  .optional();
+const AUDIT_PAGE_SIZE = 50;
+// One odd metadata value must not hide the whole history: keep primitives, trimmed.
+const auditEntrySchema = auditLogSchema.extend({
+  metadata: z.record(z.string(), z.unknown()).transform((raw) => {
+    const clean: AuditMetadata = {};
+    for (const [key, value] of Object.entries(raw).slice(0, 32)) {
+      if (typeof value === 'string') clean[key.slice(0, 64)] = value.slice(0, 500);
+      else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+        clean[key.slice(0, 64)] = value;
+      }
+    }
+    return clean;
+  }),
+});
+
 const fileOfferSchema = z
   .object({
     id: z.uuid(),
@@ -178,6 +220,119 @@ export function registerIpcHandlers(backend: Backend, sessions: SessionCoordinat
       const registered = await device.register(name);
       sessions.onDeviceRegistered();
       return registered;
+    }),
+  );
+
+  const settingsOf = (record: z.output<typeof deviceRecordSchema>): ThisDeviceSettings => ({
+    requireApproval: record.requireApproval,
+    hasAccessPassword: record.hasAccessPassword,
+    organizationId: record.organizationId,
+  });
+  handle(IPC_CHANNELS.thisDeviceSettingsGet, z.tuple([]), () =>
+    result(async () => {
+      const registered = await device.get();
+      if (!registered) return null;
+      const record = await auth.authorized({
+        method: 'GET',
+        path: `/api/v1/devices/${registered.deviceId}`,
+        schema: deviceRecordSchema,
+      });
+      return settingsOf(record);
+    }),
+  );
+  handle(IPC_CHANNELS.thisDeviceSettingsUpdate, z.tuple([settingsUpdateSchema]), ([update]) =>
+    result(async () => {
+      const registered = await device.get();
+      if (!registered) {
+        throw new ApiError(409, 'not_registered', 'Register this computer first.');
+      }
+      const record = await auth.authorized({
+        method: 'PATCH',
+        path: `/api/v1/devices/${registered.deviceId}`,
+        body: update,
+        schema: deviceRecordSchema,
+      });
+      return settingsOf(record);
+    }),
+  );
+
+  // --- Teams (organisations); roles are read and enforced by the server ---
+  const teamId = z.uuid();
+  const ok = z.unknown().transform(() => undefined);
+  handle(IPC_CHANNELS.teamsList, z.tuple([]), () =>
+    result(() =>
+      auth.authorized({
+        method: 'GET',
+        path: '/api/v1/organizations',
+        schema: z.array(organizationWithRoleSchema),
+      }),
+    ),
+  );
+  handle(IPC_CHANNELS.teamsCreate, z.tuple([organizationCreateInputSchema.strict()]), ([input]) =>
+    result(() =>
+      auth.authorized({
+        method: 'POST',
+        path: '/api/v1/organizations',
+        body: input,
+        schema: organizationWithRoleSchema,
+      }),
+    ),
+  );
+  handle(IPC_CHANNELS.teamsMembers, z.tuple([teamId]), ([id]) =>
+    result(() =>
+      auth.authorized({
+        method: 'GET',
+        path: `/api/v1/organizations/${id}/members`,
+        schema: z.array(organizationMemberSchema),
+      }),
+    ),
+  );
+  handle(
+    IPC_CHANNELS.teamsAddMember,
+    z.tuple([teamId, memberAddInputSchema.strict()]),
+    ([id, input]) =>
+      result(async () => {
+        await auth.authorized({
+          method: 'POST',
+          path: `/api/v1/organizations/${id}/members`,
+          body: input,
+          schema: ok,
+        });
+      }),
+  );
+  handle(
+    IPC_CHANNELS.teamsUpdateMember,
+    z.tuple([teamId, z.uuid(), roleSchema]),
+    ([id, userId, role]) =>
+      result(async () => {
+        await auth.authorized({
+          method: 'PATCH',
+          path: `/api/v1/organizations/${id}/members/${userId}`,
+          body: { role },
+          schema: ok,
+        });
+      }),
+  );
+  handle(IPC_CHANNELS.teamsRemoveMember, z.tuple([teamId, z.uuid()]), ([id, userId]) =>
+    result(async () => {
+      await auth.authorized({
+        method: 'DELETE',
+        path: `/api/v1/organizations/${id}/members/${userId}`,
+        schema: ok,
+      });
+    }),
+  );
+
+  // --- Activity history (the server applies RLS: own actions, or the organisation's for admins) ---
+  handle(IPC_CHANNELS.auditList, z.tuple([auditListSchema]), ([options]) =>
+    result(() => {
+      const query = new URLSearchParams({ limit: String(AUDIT_PAGE_SIZE) });
+      if (options?.before) query.set('before', options.before);
+      return auth.authorized({
+        method: 'GET',
+        path: `/api/v1/audit-logs?${query.toString()}`,
+        schema: z.array(auditEntrySchema),
+      });
     }),
   );
 

@@ -52,6 +52,20 @@ const api: DesktopApi = {
   thisDevice: {
     get: () => invoke(IPC_CHANNELS.thisDeviceGet),
     register: (name) => invoke(IPC_CHANNELS.thisDeviceRegister, name),
+    getSettings: () => invoke(IPC_CHANNELS.thisDeviceSettingsGet),
+    updateSettings: (update) => invoke(IPC_CHANNELS.thisDeviceSettingsUpdate, update),
+  },
+  teams: {
+    list: () => invoke(IPC_CHANNELS.teamsList),
+    create: (input) => invoke(IPC_CHANNELS.teamsCreate, input),
+    members: (teamId) => invoke(IPC_CHANNELS.teamsMembers, teamId),
+    addMember: (teamId, input) => invoke(IPC_CHANNELS.teamsAddMember, teamId, input),
+    updateMember: (teamId, userId, role) =>
+      invoke(IPC_CHANNELS.teamsUpdateMember, teamId, userId, role),
+    removeMember: (teamId, userId) => invoke(IPC_CHANNELS.teamsRemoveMember, teamId, userId),
+  },
+  audit: {
+    list: (options) => invoke(IPC_CHANNELS.auditList, options),
   },
   session: {
     start: (input) => invoke(IPC_CHANNELS.sessionStart, input),

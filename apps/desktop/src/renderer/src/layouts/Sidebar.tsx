@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Monitor,
   Settings,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { NavLink } from 'react-router';
@@ -27,6 +28,7 @@ const PRIMARY_NAV: NavItem[] = [
   { to: '/sessions', label: 'Sessions', icon: History },
   { to: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
   { to: '/address-book', label: 'Address Book', icon: BookUser },
+  { to: '/team', label: 'Team', icon: Users },
 ];
 
 const SECONDARY_NAV: NavItem[] = [
