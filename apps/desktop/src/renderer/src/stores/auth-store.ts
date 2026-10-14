@@ -1,4 +1,9 @@
-import type { LoginInput, PasswordResetConfirmInput, RegisterInput } from '@remote-desktop/shared';
+import type {
+  LoginInput,
+  PasswordResetConfirmInput,
+  RegisterInput,
+  SignupVerifyInput,
+} from '@remote-desktop/shared';
 import { create } from 'zustand';
 import { getDesktopApi } from '@/lib/desktop-api';
 import type { AuthState, AuthUser, IpcResult, ThisDevice } from '../../../shared/ipc';
@@ -16,6 +21,8 @@ interface AuthStoreState {
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<IpcResult>;
   confirmPasswordReset: (input: PasswordResetConfirmInput) => Promise<IpcResult>;
+  verifySignup: (input: SignupVerifyInput) => Promise<IpcResult>;
+  resendSignup: (email: string) => Promise<IpcResult>;
   registerThisDevice: (name: string) => Promise<IpcResult>;
 }
 
@@ -81,6 +88,19 @@ export const useAuthStore = create<AuthStoreState>()((set, get) => {
 
     async confirmPasswordReset(input) {
       return (await getDesktopApi()?.auth.confirmPasswordReset(input)) ?? UNAVAILABLE;
+    },
+
+    async verifySignup(input) {
+      const api = getDesktopApi();
+      if (!api) return UNAVAILABLE;
+      const result = await api.auth.verifySignup(input);
+      if (!result.ok) return result;
+      await apply(result.value);
+      return { ok: true, value: undefined };
+    },
+
+    async resendSignup(email) {
+      return (await getDesktopApi()?.auth.resendSignup(email)) ?? UNAVAILABLE;
     },
 
     async registerThisDevice(name) {

@@ -121,6 +121,7 @@ API surface:
 | `desktop.auth.getState()`                                       | Who is signed in (restores a saved session)     |
 | `desktop.auth.login/register/logout()`                          | Account actions; tokens stay in main            |
 | `desktop.auth.requestPasswordReset()`, `confirmPasswordReset()` | Password reset by emailed code                  |
+| `desktop.auth.verifySignup()`, `resendSignup()`                 | New-account confirmation by emailed code        |
 | `desktop.devices.list()`, `sessions.list()`                     | Data from the API as the signed-in user         |
 | `desktop.thisDevice.get()`, `register()`                        | This computer's device ID; key pair in main     |
 

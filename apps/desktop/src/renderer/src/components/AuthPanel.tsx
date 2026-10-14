@@ -4,17 +4,19 @@ import {
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   registerInputSchema,
+  signupVerifySchema,
   type LoginInput,
   type PasswordResetConfirmInput,
   type PasswordResetRequestInput,
   type RegisterInput,
+  type SignupVerifyInput,
 } from '@remote-desktop/shared';
 import { Button, FieldError, Input, Label } from '@remote-desktop/ui';
 import { useId, useState, type ReactNode } from 'react';
 import { useForm, type FieldValues, type Path, type UseFormRegister } from 'react-hook-form';
 import { useAuthStore } from '@/stores/auth-store';
 
-type Mode = 'sign-in' | 'register' | 'reset-request' | 'reset-confirm';
+type Mode = 'sign-in' | 'register' | 'register-confirm' | 'reset-request' | 'reset-confirm';
 
 function Field<T extends FieldValues>({
   name,
@@ -98,7 +100,13 @@ function LinkButton({ onClick, children }: { onClick: () => void; children: Reac
 
 type Message = { tone: 'error' | 'info'; text: string } | null;
 
-function SignInForm({ onMode }: { onMode: (mode: Mode) => void }) {
+function SignInForm({
+  onMode,
+  onConfirm,
+}: {
+  onMode: (mode: Mode) => void;
+  onConfirm: (email: string) => void;
+}) {
   const login = useAuthStore((s) => s.login);
   const [message, setMessage] = useState<Message>(null);
   const { register, handleSubmit, formState } = useForm<LoginInput>({
@@ -108,7 +116,10 @@ function SignInForm({ onMode }: { onMode: (mode: Mode) => void }) {
   const onSubmit = handleSubmit(async (values) => {
     setMessage(null);
     const result = await login(values);
-    if (!result.ok) setMessage({ tone: 'error', text: result.error.message });
+    if (result.ok) return;
+    // Signed up but never entered the emailed code: go straight to that step.
+    if (result.error.code === 'email_not_confirmed') onConfirm(values.email);
+    else setMessage({ tone: 'error', text: result.error.message });
   });
   return (
     <FormShell
@@ -143,7 +154,13 @@ function SignInForm({ onMode }: { onMode: (mode: Mode) => void }) {
   );
 }
 
-function RegisterForm({ onMode }: { onMode: (mode: Mode) => void }) {
+function RegisterForm({
+  onMode,
+  onConfirm,
+}: {
+  onMode: (mode: Mode) => void;
+  onConfirm: (email: string) => void;
+}) {
   const registerAccount = useAuthStore((s) => s.register);
   const [message, setMessage] = useState<Message>(null);
   const { register, handleSubmit, formState } = useForm<RegisterInput>({
@@ -154,9 +171,7 @@ function RegisterForm({ onMode }: { onMode: (mode: Mode) => void }) {
     setMessage(null);
     const result = await registerAccount(values);
     if (!result.ok) setMessage({ tone: 'error', text: result.error.message });
-    else if (result.value.needsConfirmation) {
-      setMessage({ tone: 'info', text: 'Check your email to confirm your account, then sign in.' });
-    }
+    else if (result.value.needsConfirmation) onConfirm(values.email);
   });
   return (
     <FormShell
@@ -275,13 +290,74 @@ function ResetConfirmForm({ email, onMode }: { email: string; onMode: (mode: Mod
   );
 }
 
+function SignupConfirmForm({ email, onMode }: { email: string; onMode: (mode: Mode) => void }) {
+  const verify = useAuthStore((s) => s.verifySignup);
+  const resend = useAuthStore((s) => s.resendSignup);
+  const [message, setMessage] = useState<Message>({
+    tone: 'info',
+    text: `We emailed a code to ${email}. Enter it to finish creating your account.`,
+  });
+  const [resending, setResending] = useState(false);
+  const { register, handleSubmit, formState } = useForm<SignupVerifyInput>({
+    resolver: zodResolver(signupVerifySchema),
+    defaultValues: { email, code: '' },
+  });
+  const onSubmit = handleSubmit(async (values) => {
+    setMessage(null);
+    const result = await verify(values);
+    // On success the auth store switches to signed-in and this panel goes away.
+    if (!result.ok) setMessage({ tone: 'error', text: result.error.message });
+  });
+  const sendAgain = async () => {
+    setResending(true);
+    const result = await resend(email);
+    setResending(false);
+    setMessage(
+      result.ok
+        ? { tone: 'info', text: 'If the account still needs confirming, a new code is on its way.' }
+        : { tone: 'error', text: result.error.message },
+    );
+  };
+  return (
+    <FormShell
+      onSubmit={onSubmit}
+      submitting={formState.isSubmitting}
+      submitLabel="Confirm and sign in"
+      message={message}
+      footer={
+        <>
+          <LinkButton onClick={() => void sendAgain()}>
+            {resending ? 'Sending…' : 'Send a new code'}
+          </LinkButton>
+          <LinkButton onClick={() => onMode('sign-in')}>Back to sign in</LinkButton>
+        </>
+      }
+    >
+      <Field
+        name="code"
+        label="Code from the email"
+        autoComplete="one-time-code"
+        register={register}
+        error={formState.errors.code?.message}
+      />
+    </FormShell>
+  );
+}
+
 /** Sign in, create an account, or reset a password. Credentials go straight to the main process. */
 export function AuthPanel() {
   const [mode, setMode] = useState<Mode>('sign-in');
   const [resetEmail, setResetEmail] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const confirm = (email: string) => {
+    setSignupEmail(email);
+    setMode('register-confirm');
+  };
   switch (mode) {
     case 'register':
-      return <RegisterForm onMode={setMode} />;
+      return <RegisterForm onMode={setMode} onConfirm={confirm} />;
+    case 'register-confirm':
+      return <SignupConfirmForm email={signupEmail} onMode={setMode} />;
     case 'reset-request':
       return (
         <ResetRequestForm
@@ -295,6 +371,6 @@ export function AuthPanel() {
     case 'reset-confirm':
       return <ResetConfirmForm email={resetEmail} onMode={setMode} />;
     default:
-      return <SignInForm onMode={setMode} />;
+      return <SignInForm onMode={setMode} onConfirm={confirm} />;
   }
 }

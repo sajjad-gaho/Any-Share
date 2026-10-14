@@ -21,6 +21,7 @@ import type {
   PasswordResetConfirmInput,
   RegisterInput,
   Role,
+  SignupVerifyInput,
   SessionPermission,
   SessionRecord,
 } from '@remote-desktop/shared';
@@ -40,6 +41,8 @@ export const IPC_CHANNELS = {
   authLogout: 'auth:logout',
   authRequestPasswordReset: 'auth:request-password-reset',
   authConfirmPasswordReset: 'auth:confirm-password-reset',
+  authVerifySignup: 'auth:verify-signup',
+  authResendSignup: 'auth:resend-signup',
   devicesList: 'devices:list',
   sessionsList: 'sessions:list',
   thisDeviceGet: 'this-device:get',
@@ -237,6 +240,9 @@ export interface DesktopApi {
     logout(): Promise<IpcResult>;
     requestPasswordReset(email: string): Promise<IpcResult>;
     confirmPasswordReset(input: PasswordResetConfirmInput): Promise<IpcResult>;
+    /** Confirms a new account with the emailed code and signs in. */
+    verifySignup(input: SignupVerifyInput): Promise<IpcResult<AuthState>>;
+    resendSignup(email: string): Promise<IpcResult>;
   };
   devices: {
     list(): Promise<IpcResult<DeviceRecord[]>>;

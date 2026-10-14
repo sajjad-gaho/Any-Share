@@ -89,6 +89,8 @@ protected and audited in one place:
 | Endpoint                            | Notes                                                                 |
 | ----------------------------------- | --------------------------------------------------------------------- |
 | `POST /auth/register`               | Vague error on failure (no account enumeration)                       |
+| `POST /auth/register/verify`        | Code from the "Confirm signup" email; confirms and signs in           |
+| `POST /auth/register/resend`        | Sends the sign-up code again; always `202`                            |
 | `POST /auth/login`                  | Lockout per account and per IP, exponential back-off; `LOGIN` audited |
 | `POST /auth/refresh`                | Session restoration; Supabase rotates the refresh token               |
 | `POST /auth/logout`                 | Revokes the Supabase session; `LOGOUT` audited                        |

@@ -3,7 +3,7 @@ import type { AuthResult } from '@remote-desktop/shared';
 import { SignJWT } from 'jose';
 import type { AuthProvider } from '../auth/auth-provider';
 import type { Db } from '../db/types';
-import { badRequest, unauthenticated } from '../errors';
+import { AppError, badRequest, unauthenticated } from '../errors';
 
 export const TEST_SUPABASE_URL = 'http://supabase.test';
 export const TEST_JWT_ISSUER = `${TEST_SUPABASE_URL}/auth/v1`;
@@ -19,6 +19,9 @@ export class FakeAuthProvider implements AuthProvider {
   private readonly passwords = new Map<string, string>();
   private readonly refreshTokens = new Map<string, { userId: string; sessionId: string }>();
   private readonly resetCodes = new Map<string, string>();
+  private readonly signupCodes = new Map<string, string>();
+  /** When true, sign-up returns no session until the emailed code is verified. */
+  confirmSignups = false;
   readonly calls: string[] = [];
 
   constructor(
@@ -38,6 +41,10 @@ export class FakeAuthProvider implements AuthProvider {
     );
     if (!user) throw new Error('insert failed');
     this.passwords.set(input.email, input.password);
+    if (this.confirmSignups) {
+      this.signupCodes.set(input.email, String(randomInt(100000, 999999)));
+      return { user: { id: user.id, email: input.email }, tokens: null };
+    }
     return this.issue(user.id, input.email);
   }
 
@@ -49,6 +56,9 @@ export class FakeAuthProvider implements AuthProvider {
     );
     if (!user || this.passwords.get(input.email) !== input.password) {
       throw unauthenticated('Invalid email or password');
+    }
+    if (this.signupCodes.has(input.email)) {
+      throw new AppError('email_not_confirmed', 'Confirm your email address first');
     }
     return this.issue(user.id, input.email);
   }
@@ -96,6 +106,31 @@ export class FakeAuthProvider implements AuthProvider {
       'delete from auth.sessions where user_id = (select id from auth.users where email = $1)',
       [input.email],
     );
+  }
+
+  async verifySignup(input: { email: string; code: string }) {
+    if (this.signupCodes.get(input.email) !== input.code) {
+      throw unauthenticated('Invalid or expired code');
+    }
+    this.signupCodes.delete(input.email);
+    const [user] = await this.db.query<{ id: string }>(
+      'select id from auth.users where email = $1',
+      [input.email],
+    );
+    if (!user) throw unauthenticated('Invalid or expired code');
+    return this.issue(user.id, input.email);
+  }
+
+  async resendSignup(email: string) {
+    this.calls.push('resend');
+    if (this.signupCodes.has(email)) {
+      this.signupCodes.set(email, String(randomInt(100000, 999999)));
+    }
+  }
+
+  /** Test helper: the code the sign-up email would have contained. */
+  signupCodeFor(email: string): string | undefined {
+    return this.signupCodes.get(email);
   }
 
   /** Test helper: the code the recovery email would have contained. */

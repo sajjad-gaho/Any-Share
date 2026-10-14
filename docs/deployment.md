@@ -122,8 +122,12 @@ only source of secrets.
 2. `supabase db push --dry-run` then `supabase db push` for `supabase/migrations`.
 3. <a id="database-role"></a>Recommended: switch to `kestrel_api` (migration already applied; see supabase/migrations-pending/README.md),
    set the `kestrel_api` password, use it in `DATABASE_URL`.
-4. Supabase dashboard: Auth → enable **leaked password protection**; set the
-   site URL / redirect URLs for e-mail confirmation and password reset.
+4. Supabase dashboard: Auth → enable **leaked password protection**.
+5. Supabase dashboard: Auth → Email Templates. The app confirms accounts and
+   resets passwords with **codes**, not links, so both templates must show the
+   code: in **Confirm signup** and **Reset password** use `{{ .Token }}`
+   instead of `{{ .ConfirmationURL }}`. Keep the email OTP length at 6–10
+   digits.
 
 ## 7. Start
 

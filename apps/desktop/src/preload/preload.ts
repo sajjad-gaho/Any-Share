@@ -42,6 +42,8 @@ const api: DesktopApi = {
     logout: () => invoke(IPC_CHANNELS.authLogout),
     requestPasswordReset: (email) => invoke(IPC_CHANNELS.authRequestPasswordReset, email),
     confirmPasswordReset: (input) => invoke(IPC_CHANNELS.authConfirmPasswordReset, input),
+    verifySignup: (input) => invoke(IPC_CHANNELS.authVerifySignup, input),
+    resendSignup: (email) => invoke(IPC_CHANNELS.authResendSignup, email),
   },
   devices: {
     list: () => invoke(IPC_CHANNELS.devicesList),

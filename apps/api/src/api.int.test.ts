@@ -202,6 +202,77 @@ describe('auth routes', () => {
     expect(errorCode(res)).toBe('bad_request');
   });
 
+  it('confirms a new account with the emailed code instead of a link', async () => {
+    h.authProvider.confirmSignups = true;
+    try {
+      const credentials = { email: 'ada@example.test', password: 'a very long password' };
+      const registered = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: { ...credentials, displayName: 'Ada' },
+      });
+      expect(registered.statusCode).toBe(201);
+      expect((registered.json() as { tokens: unknown }).tokens).toBeNull();
+
+      const early = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: credentials,
+      });
+      expect(early.statusCode).toBe(403);
+      expect(errorCode(early)).toBe('email_not_confirmed');
+
+      const wrong = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register/verify',
+        payload: { email: credentials.email, code: '000000' },
+      });
+      expect(wrong.statusCode).toBe(401);
+
+      for (const email of [credentials.email, 'nobody@example.test']) {
+        const resend = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register/resend',
+          payload: { email },
+        });
+        expect(resend.statusCode).toBe(202);
+        expect(resend.json()).toEqual({ status: 'sent_if_registered' });
+      }
+
+      const code = h.authProvider.signupCodeFor(credentials.email);
+      expect(code).toMatch(/^\d{6}$/);
+      const verified = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register/verify',
+        payload: { email: 'ADA@example.test', code },
+      });
+      expect(verified.statusCode).toBe(200);
+      const { tokens } = verified.json() as { tokens: { accessToken: string } };
+      const me = await app.inject({
+        method: 'GET',
+        url: '/api/v1/users/me',
+        headers: { authorization: `Bearer ${tokens.accessToken}` },
+      });
+      expect(me.json()).toMatchObject({ email: credentials.email, displayName: 'Ada' });
+
+      // The code is single-use, and a confirmed account signs in normally.
+      const again = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register/verify',
+        payload: { email: credentials.email, code },
+      });
+      expect(again.statusCode).toBe(401);
+      const login = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: credentials,
+      });
+      expect(login.statusCode).toBe(200);
+    } finally {
+      h.authProvider.confirmSignups = false;
+    }
+  });
+
   it('never reveals whether an email is registered on password reset', async () => {
     const user = await h.createUser('Forgetful');
     for (const email of [user.email, 'nobody@example.test']) {

@@ -31,15 +31,25 @@ export const refreshInputSchema = z.object({
 export const passwordResetRequestSchema = z.object({ email: emailSchema });
 export type PasswordResetRequestInput = z.input<typeof passwordResetRequestSchema>;
 
+/** One-time code from an email (Supabase sends 6 digits by default; up to 10 is configurable). */
+export const emailCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6,10}$/, 'Enter the code from the email');
+
 /** Completes a reset with the one-time code from the recovery email. */
 export const passwordResetConfirmSchema = z.object({
   email: emailSchema,
-  code: z
-    .string()
-    .trim()
-    .regex(/^\d{6,10}$/, 'Enter the code from the email'),
+  code: emailCodeSchema,
   newPassword: passwordSchema,
 });
+
+/** Confirms a new account with the one-time code from the sign-up email, and signs in. */
+export const signupVerifySchema = z.object({ email: emailSchema, code: emailCodeSchema });
+export type SignupVerifyInput = z.input<typeof signupVerifySchema>;
+
+/** Sends the sign-up code again. */
+export const signupResendSchema = z.object({ email: emailSchema });
 export type PasswordResetConfirmInput = z.input<typeof passwordResetConfirmSchema>;
 
 /** Tokens issued on login/refresh. Kept in the desktop main process, never the renderer. */

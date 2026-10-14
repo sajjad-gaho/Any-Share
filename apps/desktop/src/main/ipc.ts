@@ -17,6 +17,7 @@ import {
   roleSchema,
   sessionPermissionSetSchema,
   sessionRecordSchema,
+  signupVerifySchema,
   type AuditMetadata,
 } from '@remote-desktop/shared';
 import {
@@ -191,6 +192,12 @@ export function registerIpcHandlers(backend: Backend, sessions: SessionCoordinat
   );
   handle(IPC_CHANNELS.authConfirmPasswordReset, z.tuple([passwordResetConfirmSchema]), ([input]) =>
     result(() => auth.confirmPasswordReset(input)),
+  );
+  handle(IPC_CHANNELS.authVerifySignup, z.tuple([signupVerifySchema]), ([input]) =>
+    result(() => auth.verifySignup(input)),
+  );
+  handle(IPC_CHANNELS.authResendSignup, z.tuple([emailSchema]), ([email]) =>
+    result(() => auth.resendSignup(email)),
   );
 
   // --- Data (authorised server-side; the renderer cannot choose whose data) ---

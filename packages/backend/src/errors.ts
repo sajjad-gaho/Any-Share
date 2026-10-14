@@ -6,6 +6,8 @@
 export type ErrorCode =
   | 'bad_request'
   | 'unauthenticated'
+  /** Right password, but the account's email is not confirmed yet. */
+  | 'email_not_confirmed'
   | 'forbidden'
   | 'not_found'
   | 'conflict'
@@ -17,6 +19,7 @@ export type ErrorCode =
 const HTTP_STATUS: Record<ErrorCode, number> = {
   bad_request: 400,
   unauthenticated: 401,
+  email_not_confirmed: 403,
   forbidden: 403,
   not_found: 404,
   conflict: 409,

@@ -6,6 +6,7 @@ import {
   type LoginInput,
   type PasswordResetConfirmInput,
   type RegisterInput,
+  type SignupVerifyInput,
 } from '@remote-desktop/shared';
 import { z, type ZodType } from 'zod';
 import type { AuthState, AuthUser } from '../../shared/ipc';
@@ -94,6 +95,28 @@ export class AuthSession {
     if (!result.tokens) return { state: this.getState(), needsConfirmation: true };
     await this.adopt(result);
     return { state: this.getState(), needsConfirmation: false };
+  }
+
+  /** Confirms a new account with the code from the sign-up email, then signs in. */
+  async verifySignup(input: SignupVerifyInput): Promise<AuthState> {
+    await this.adopt(
+      await this.http.request({
+        method: 'POST',
+        path: '/api/v1/auth/register/verify',
+        body: input,
+        schema: authResultSchema,
+      }),
+    );
+    return this.getState();
+  }
+
+  async resendSignup(email: string): Promise<void> {
+    await this.http.request({
+      method: 'POST',
+      path: '/api/v1/auth/register/resend',
+      body: { email },
+      schema: anyBody,
+    });
   }
 
   async logout(): Promise<void> {

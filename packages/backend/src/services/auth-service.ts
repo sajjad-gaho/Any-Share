@@ -129,6 +129,47 @@ export class AuthService {
     guard.recordSuccess(`login:account:${email}`);
   }
 
+  /**
+   * Confirms a new account with the emailed code and signs it in. Wrong codes
+   * lock the account key with the same back-off as failed logins.
+   */
+  async verifySignup(
+    input: { email: string; code: string },
+    meta: RequestMeta,
+  ): Promise<AuthResult> {
+    const email = normalizeEmail(input.email);
+    const guard = this.deps.limiters.loginGuard;
+    const key = `signup:account:${email}`;
+    guard.assertNotLocked(key);
+    let result: AuthResult;
+    try {
+      result = await this.provider.verifySignup({ email, code: input.code });
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'unauthenticated') {
+        guard.recordFailure(key);
+        this.deps.logger.warn({ ip: meta.ip }, 'Failed sign-up confirmation');
+      }
+      throw error;
+    }
+    guard.recordSuccess(key);
+    await this.audit.record(
+      {
+        action: 'LOGIN',
+        actorUserId: result.user.id,
+        targetType: 'user',
+        targetId: result.user.id,
+        metadata: { method: 'email_code', userAgent: meta.userAgent ?? null },
+      },
+      meta,
+    );
+    return result;
+  }
+
+  /** Always succeeds from the caller's point of view (no account enumeration). */
+  async resendSignup(email: string): Promise<void> {
+    await this.provider.resendSignup(normalizeEmail(email));
+  }
+
   /** Verifies an access token and returns the caller. The only source of user identity. */
   async authenticate(accessToken: string): Promise<AuthContext> {
     const verified = await this.verifier.verify(accessToken);

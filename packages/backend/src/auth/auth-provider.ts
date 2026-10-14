@@ -16,6 +16,10 @@ export interface AuthProvider {
   requestPasswordReset(email: string): Promise<void>;
   /** Verifies the recovery code, sets the new password and signs out every session. */
   confirmPasswordReset(input: { email: string; code: string; newPassword: string }): Promise<void>;
+  /** Confirms a new account with the code from the sign-up email; returns a session. */
+  verifySignup(input: { email: string; code: string }): Promise<AuthResult>;
+  /** Sends the sign-up code again (silently does nothing for unknown addresses). */
+  resendSignup(email: string): Promise<void>;
 }
 
 const sessionResponseSchema = z.object({
@@ -125,7 +129,10 @@ export function createSupabaseAuthProvider(options: SupabaseAuthProviderOptions)
       } catch (error) {
         if (error instanceof GoTrueError) {
           if (error.code === 'email_not_confirmed') {
-            throw unauthenticated('Confirm your email address before signing in');
+            throw new AppError(
+              'email_not_confirmed',
+              'Confirm your email address first: enter the code we emailed you.',
+            );
           }
           throw unauthenticated('Invalid email or password');
         }
@@ -189,6 +196,28 @@ export function createSupabaseAuthProvider(options: SupabaseAuthProviderOptions)
       }
       // A reset should evict anyone who had the old password.
       await this.signOut(accessToken, 'global');
+    },
+
+    async verifySignup({ email, code }) {
+      try {
+        // `signup` is the OTP type of the "Confirm signup" email ({{ .Token }}).
+        const json = await call('/verify', { body: { type: 'signup', email, token: code } });
+        const session = sessionResponseSchema.parse(json);
+        return { user: session.user, tokens: toTokens(session) };
+      } catch (error) {
+        if (error instanceof GoTrueError) throw unauthenticated('Invalid or expired code');
+        throw error;
+      }
+    },
+
+    async resendSignup(email) {
+      try {
+        await call('/resend', { body: { type: 'signup', email } });
+      } catch (error) {
+        // Never reveal whether the address exists or is already confirmed.
+        if (error instanceof GoTrueError) return;
+        throw error;
+      }
     },
   };
 }

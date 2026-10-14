@@ -4,6 +4,8 @@ import {
   passwordResetRequestSchema,
   refreshInputSchema,
   registerInputSchema,
+  signupResendSchema,
+  signupVerifySchema,
 } from '@remote-desktop/shared';
 import type { FastifyPluginAsync } from 'fastify';
 import type { RouteContext } from '../app';
@@ -23,6 +25,19 @@ export const authRoutes =
       const input = parse(registerInputSchema, request.body);
       const result = await auth.register(input);
       return reply.code(201).send(result);
+    });
+
+    /** Confirms a new account with the code from the sign-up email; returns tokens. */
+    app.post('/register/verify', { config: ctx.limit(10) }, async (request) => {
+      const input = parse(signupVerifySchema, request.body);
+      return auth.verifySignup(input, requestMeta(request));
+    });
+
+    /** Always 202, whether or not the address has an unconfirmed account. */
+    app.post('/register/resend', { config: ctx.limit(3) }, async (request, reply) => {
+      const { email } = parse(signupResendSchema, request.body);
+      await auth.resendSignup(email);
+      return reply.code(202).send({ status: 'sent_if_registered' });
     });
 
     app.post('/login', { config: ctx.limit(10) }, async (request) => {
