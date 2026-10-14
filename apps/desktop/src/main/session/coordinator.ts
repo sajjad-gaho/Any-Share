@@ -19,7 +19,7 @@
  */
 import { join } from 'node:path';
 import { sessionPermissionSchema, type SessionPermission } from '@remote-desktop/shared';
-import { PERMISSION_LABELS } from '@remote-desktop/shared';
+import { BRAND, PERMISSION_LABELS } from '@remote-desktop/shared';
 import type {
   IceServerConfig,
   InputMessage,
@@ -281,7 +281,7 @@ export class SessionCoordinator {
   }
 
   private newFileSink(): FileSink {
-    return new FileSink(join(app.getPath('downloads'), 'Kestrel Remote'));
+    return new FileSink(join(app.getPath('downloads'), BRAND.productName));
   }
 
   // -------------------------------------------------------------------------
@@ -949,7 +949,7 @@ export class SessionCoordinator {
       this.emit(session, {
         type: 'activity',
         sessionId,
-        text: `Received file "${received.name}" (saved to Downloads\\Kestrel Remote).`,
+        text: `Received file "${received.name}" (saved to Downloads\\${BRAND.productName}).`,
       });
     }
     return { name: received.name };
@@ -969,7 +969,7 @@ export class SessionCoordinator {
   }
 
   async openDownloadFolder(): Promise<void> {
-    const folder = join(app.getPath('downloads'), 'Kestrel Remote');
+    const folder = join(app.getPath('downloads'), BRAND.productName);
     await shell.openPath(folder);
   }
 

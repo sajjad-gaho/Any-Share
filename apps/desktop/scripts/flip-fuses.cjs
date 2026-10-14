@@ -1,7 +1,7 @@
 // Flips the Electron fuses of a packaged binary, then reads them back and fails
 // the build if any fuse did not take. Runs in its own process (see after-pack.cjs).
 //
-//   node scripts/flip-fuses.cjs "<path to Kestrel Remote.exe>"
+//   node scripts/flip-fuses.cjs "<path to PBS AnyDesk.exe>"
 const { FuseV1Options, FuseVersion, flipFuses, getCurrentFuseWire } = require('@electron/fuses');
 
 /** Desired state; see electron-builder.yml and docs/security.md for the reasons. */

@@ -66,6 +66,9 @@ server {
     #   (install steps for the page and this snippet are in email-confirmed.conf)
     include /etc/nginx/snippets/kestrel-email-confirmed.conf;
 
+    # Landing page at / and the installer download (see site.conf).
+    include /etc/nginx/snippets/kestrel-site.conf;
+
     # Nothing else is served on this host name.
     location / {
         return 404;

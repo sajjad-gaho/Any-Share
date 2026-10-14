@@ -1,14 +1,17 @@
-# Packaging configuration. Identifiers and names are placeholders until branding
-# is final: change appId, productName, copyright, win.publisherName (and the
-# AppUserModelId in src/main/main.ts) together, before the first public release
-# (changing appId later breaks upgrades of installed copies).
+# Packaging configuration. appId, productName and copyright are the public
+# PBS AnyDesk identity; change them together with the AppUserModelId in
+# src/main/main.ts and BRAND in packages/shared/src/brand.ts. Changing appId
+# makes Windows treat the result as a different application (no in-place upgrade).
+#
+# User data stays in %APPDATA%\@remote-desktop\desktop (from package.json `name`,
+# not productName), so renaming the product keeps sign-in and the device identity.
 #
 # Release builds: `pnpm --filter @remote-desktop/desktop package:win` with
 # MAIN_VITE_API_URL (https://) and MAIN_VITE_SIGNALING_URL (wss://) set in
 # apps/desktop/.env.production; scripts/after-pack.cjs refuses anything else.
-appId: com.example.kestrel-remote
-productName: Kestrel Remote
-copyright: Copyright © 2026 Kestrel Remote (placeholder)
+appId: com.pbsdigitals.pbs-anydesk
+productName: PBS AnyDesk
+copyright: Copyright © 2026 PBS AnyDesk
 
 directories:
   output: release
@@ -41,9 +44,9 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
-  # Application icon: build/icon.ico (256x256 multi-size). NOT PROVIDED YET: the
-  # default Electron icon is used until branding exists.
+  artifactName: pbs-anydesk-setup-${version}-${arch}.${ext}
+  # Application icon: build/icon.png (512x512, the PBS AnyDesk mark). electron-builder
+  # turns it into the multi-size .ico for the app, its shortcuts and the installer.
   #
   # CODE SIGNING: NOT CONFIGURED (no certificate available). Unsigned builds show
   # a SmartScreen warning and cannot be auto-updated safely. When a certificate
@@ -67,4 +70,4 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
-  shortcutName: Kestrel Remote
+  shortcutName: PBS AnyDesk

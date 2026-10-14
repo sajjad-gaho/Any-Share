@@ -48,7 +48,7 @@ if (!app.requestSingleInstanceLock()) {
   // No application menu in production: it would also bring the DevTools / reload accelerators.
   if (app.isPackaged) Menu.setApplicationMenu(null);
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.example.kestrel-remote'); // placeholder identifier
+    app.setAppUserModelId('com.pbsdigitals.pbs-anydesk'); // = appId in electron-builder.yml
   }
 
   app.on('second-instance', () => {

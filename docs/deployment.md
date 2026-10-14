@@ -31,6 +31,14 @@ start `docker-compose.yml` (its Caddy needs 80/443). Use instead:
   (TRUST_PROXY=1) and adds HSTS; the API sets the other security headers.
   The WebSocket map variable is uniquely named, so other sites' maps do not clash.
 - Certificates: `certbot --nginx -d <host>` changes only that server block.
+- Optional static pages, each an nginx snippet included in that server block
+  (install steps in each file's header):
+  - `nginx/email-confirmed.conf` plus `email-confirmed.html`: the landing page
+    for Supabase email links (`/email-confirmed`).
+  - `nginx/site.conf` plus `infra/deploy/site/`: the public landing page at `/`
+    and the installer at `/downloads/pbs-anydesk-setup.exe`. The installer is
+    copied to the server separately and never committed. When it changes, update
+    the version, size and SHA-256 in `site/index.html`.
 - Desktop build: `MAIN_VITE_API_URL=https://<host>`, `MAIN_VITE_SIGNALING_URL=wss://<host>/ws`.
 
 Verified locally (2026-10-08) with nginx 1.26 next to another site:

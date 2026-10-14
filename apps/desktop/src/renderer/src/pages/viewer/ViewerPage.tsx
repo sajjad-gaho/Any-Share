@@ -700,7 +700,7 @@ export function ViewerPage() {
           <Tooltip
             content={
               permissions.includes('file_transfer')
-                ? 'Send files (saved to the remote Downloads\\Kestrel Remote folder)'
+                ? 'Send files (saved to the remote Downloads\\PBS AnyDesk folder)'
                 : 'File transfer was not granted'
             }
           >

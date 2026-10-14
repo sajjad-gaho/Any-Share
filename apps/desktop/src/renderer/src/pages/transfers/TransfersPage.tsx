@@ -7,7 +7,7 @@ import { getDesktopApi } from '@/lib/desktop-api';
  * Files are transferred inside a live session (viewer toolbar on the
  * controlling side, "Send file" in the session indicator on the remote side)
  * and require the file-transfer permission. Received files are saved to
- * Downloads\Kestrel Remote, never overwriting anything.
+ * Downloads\PBS AnyDesk, never overwriting anything.
  */
 export function TransfersPage() {
   return (
@@ -25,7 +25,7 @@ export function TransfersPage() {
       <EmptyState
         icon={<ArrowLeftRight />}
         title="Transfer files during a session"
-        description="Start a session with file transfer allowed, then use Send files in the viewer. Files you receive are saved to Downloads\Kestrel Remote and are verified (SHA-256) before they appear. A transfer history is not kept on this page yet."
+        description="Start a session with file transfer allowed, then use Send files in the viewer. Files you receive are saved to Downloads\PBS AnyDesk and are verified (SHA-256) before they appear. A transfer history is not kept on this page yet."
       />
     </>
   );

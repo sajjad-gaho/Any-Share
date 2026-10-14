@@ -1,9 +1,9 @@
 /**
- * Placeholder branding. Replace these values (and the logo in packages/ui) once
- * the final product name and identity are decided.
+ * Product branding shown to users. The packaged name, installer and shortcuts come
+ * from apps/desktop/electron-builder.yml; keep the two in step.
  */
 export const BRAND = {
-  productName: 'Kestrel Remote',
-  shortName: 'Kestrel',
+  productName: 'PBS AnyDesk',
+  shortName: 'AnyDesk',
   tagline: 'Remote support, simplified',
 } as const;

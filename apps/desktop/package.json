@@ -2,8 +2,8 @@
   "name": "@remote-desktop/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Kestrel Remote desktop client (placeholder branding).",
-  "author": "Kestrel Remote (placeholder)",
+  "description": "PBS AnyDesk desktop client.",
+  "author": "PBS AnyDesk",
   "main": "./out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
