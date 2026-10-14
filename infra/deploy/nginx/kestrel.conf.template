@@ -62,6 +62,10 @@ server {
         proxy_buffering off;
     }
 
+    # Landing page for Supabase e-mail links (optional; see email-confirmed.conf).
+    #   cp email-confirmed.conf /etc/nginx/snippets/kestrel-email-confirmed.conf
+    include /etc/nginx/snippets/kestrel-email-confirmed.conf;
+
     # Nothing else is served on this host name.
     location / {
         return 404;
